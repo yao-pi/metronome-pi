@@ -50,9 +50,17 @@ In the Pi Browser, open `develop.pi`:
 
 - Create the app, then note the **Server API Key**.
 - Set the **Production URL** to `https://yao-pi.github.io/metronome-pi/`.
-- Set the **Development URL** to your sandbox URL if you want to test there.
+- Set the **Development URL** to `http://localhost:8000` — this is where *your*
+  machine serves the app (see [Local development](#local-development)); the Pi
+  Sandbox loads it from there. It is not a URL Pi gives you.
 - Copy the **validation key** into `docs/validation-key.txt` and push, so Pi can
   verify you control the domain.
+
+The **Sandbox URL** is the separate one Pi hands *back* to you, under "Run
+Development App in the Sandbox" in the app checklist. It looks like
+`https://sandbox.minepi.com/mobile-app-ui/app/<your-app-name>`, and it is the
+URL you actually open to test. Your dev server must be running on port 8000 at
+the time, or the Sandbox has nothing to load.
 
 ### 2. Deploy the Worker
 
@@ -90,10 +98,18 @@ A "Sandbox" badge appears in the app bar when the sandbox flag is on.
 
 ## Local development
 
+Serve `docs/` on port 8000 — this is the **Development URL** you register in the
+Developer Portal, and the port `ALLOWED_ORIGINS` already whitelists. If you
+change it, change it in `worker/wrangler.toml` and the Portal too.
+
 ```bash
 python3 -m http.server 8000 --directory docs
 cd worker && npx wrangler dev
 ```
+
+Note the app sits at the server root locally (`http://localhost:8000/`), whereas
+in production it is under a subpath (`/metronome-pi/`). All asset paths are
+relative, so both work.
 
 ```bash
 cd worker && npm test
