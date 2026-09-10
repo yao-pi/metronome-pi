@@ -132,17 +132,36 @@ button is inert in a desktop browser (the metronome itself works anywhere).
 
 ## Environments
 
-**`SANDBOX` is currently forced to `true`** in `config.js`, so every environment —
-including the deployed Pages URL — runs against the Pi Sandbox and no real Pi
-can move. A "Sandbox" badge shows in the app bar whenever the flag is on.
+There are **two independent axes** here, and conflating them breaks payments.
 
-To go live, set `SANDBOX: false`. `config.js` also carries a commented-out
-getter that picks the environment from the hostname instead, if you'd rather
-have localhost stay on Sandbox while production runs Mainnet.
+### 1. `SANDBOX` — which client the app runs in
 
-Note that the supported way to exercise the Sandbox is the Sandbox URL pointed
-at your local dev server; `sandbox: true` on the public Pages URL keeps real Pi
-safe but is not a configuration Pi documents.
+`Pi.init({ sandbox })` selects the Pi Sandbox dev environment. It must match
+how the app was actually reached, because sandbox mode hands the payment to a
+sandbox host frame:
+
+| Reached via | `location.hostname` | `SANDBOX` |
+|---|---|---|
+| Pi Sandbox URL → your dev server | `localhost` | `true` |
+| Pi Browser → the production URL | `yao-pi.github.io` | `false` |
+
+`config.js` derives this from the hostname, so it is right in both cases. Do
+not hardcode it: forcing `true` makes the Pi Browser fail, because on the
+production URL there is no sandbox host frame and the payment never starts.
+
+### 2. `NETWORK` — which blockchain the tip settles on
+
+Fixed by the **Developer Portal registration**, not by any flag in this repo.
+This app is registered on **Testnet**, so tips are Testnet Pi however the app
+is opened — the sandbox flag does not change that.
+
+`NETWORK` in `config.js` is a label only. It drives the badge (red once it
+reads `"Mainnet"`) and switches nothing. Update it when the app is actually
+re-registered on Mainnet, which is also the point at which tips begin spending
+real Pi.
+
+The badge in the app bar shows `Sandbox` when the flag is on, and otherwise
+the network name.
 
 ## Local development
 

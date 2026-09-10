@@ -15,6 +15,19 @@ window.APP_CONFIG = {
   TIP_AMOUNT: 0.1,
 
   /**
+   * The Pi network this app is registered on in the Developer Portal.
+   *
+   * Independent of SANDBOX: the sandbox flag selects the Pi Sandbox dev
+   * environment, whereas the network is fixed by the Portal registration. A
+   * Testnet app moves Testnet Pi whichever way it is opened.
+   *
+   * Displayed as a badge, and shown in red once it reads "Mainnet". Change it
+   * only when the app is actually re-registered on Mainnet — nothing here
+   * switches networks on its own.
+   */
+  NETWORK: "Testnet",
+
+  /**
    * The sandbox flag must match how the app was reached, or the SDK has no one
    * to talk to:
    *
@@ -25,8 +38,8 @@ window.APP_CONFIG = {
    * sandbox host frame to hand the payment to, and on the production URL there
    * isn't one, so the flow never starts.
    *
-   * Consequence: tips taken through the Pi Browser are real Mainnet Pi. To
-   * test without moving real Pi, use the Sandbox URL against your dev server.
+   * This flag says nothing about which blockchain the tip settles on — see
+   * NETWORK below.
    */
   get SANDBOX() {
     const h = location.hostname;
