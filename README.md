@@ -90,7 +90,12 @@ the time, or the Sandbox has nothing to load.
 
 ### 2. Deploy the Worker
 
+Deployed at **https://metronome-pi.yao-pi.workers.dev**.
+
+Wrangler needs Node ≥22; if your default is older, select a newer one first:
+
 ```bash
+export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && nvm use 24
 cd worker
 npm install
 npx wrangler secret put PI_API_KEY     # paste the Server API Key
@@ -101,10 +106,11 @@ Confirm the allowed origins in `wrangler.toml` match where the app is served
 from. Check it came up:
 
 ```bash
-curl https://metronome-pi.<your-subdomain>.workers.dev/health
+curl https://metronome-pi.yao-pi.workers.dev/health
 ```
 
-`{"ok":true,"configured":true}` means the key is bound.
+`{"ok":true,"configured":true}` means the key is bound; `"configured":false`
+means the secret is missing.
 
 ### 3. Point the frontend at it
 
