@@ -217,7 +217,23 @@ export default {
     }
 
     if (pathname === "/health") {
-      return json({ ok: true, configured: Boolean(env.PI_API_KEY) }, 200, request, env);
+      const deep = new URL(request.url).searchParams.get("deep");
+      if (!deep) {
+        return json({ ok: true, configured: Boolean(env.PI_API_KEY) }, 200, request, env);
+      }
+      // Cheapest Server-API-Key-authenticated call there is, used purely to
+      // prove the bound key is live. It cannot tell us which project the key
+      // belongs to — only a real payment lookup does that.
+      const probe = await piServerFetch(env, "/payments/incomplete_server_payments");
+      return json({
+        ok: true,
+        configured: Boolean(env.PI_API_KEY),
+        keyAccepted: probe.ok,
+        keyStatus: probe.status,
+        note: probe.ok
+          ? "Key is valid. Whether it is the RIGHT project's key is only provable by a payment."
+          : `Pi rejected the key: ${piError(probe.body) || "no detail"}`,
+      }, 200, request, env);
     }
 
     if (request.method !== "POST") {
