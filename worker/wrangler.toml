@@ -2,6 +2,11 @@ name = "metronome-pi"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
 
+# Publishes to https://metronome-pi.<your-subdomain>.workers.dev, which is what
+# docs/config.js points BACKEND_URL at. Explicit so the URL can't silently
+# disappear behind a routes change.
+workers_dev = true
+
 [vars]
 # Origins allowed to call this worker (comma-separated, no trailing slash).
 ALLOWED_ORIGINS = "https://yao-pi.github.io,http://localhost:8000"

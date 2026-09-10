@@ -7,8 +7,9 @@
  * the Server API Key must never be shipped to the browser.
  */
 window.APP_CONFIG = {
-  // e.g. "https://metronome-pi.<your-subdomain>.workers.dev"
-  BACKEND_URL: "",
+  // The Cloudflare Worker in ../worker. No trailing slash — paths are appended
+  // directly, so one would produce "//approve".
+  BACKEND_URL: "https://metronome-pi.yao-pi.workers.dev",
 
   // Fixed tip, in Pi.
   TIP_AMOUNT: 0.1,
