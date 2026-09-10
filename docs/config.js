@@ -14,12 +14,18 @@ window.APP_CONFIG = {
   TIP_AMOUNT: 0.1,
 
   /**
-   * Sandbox is used for local development and for the Pi Sandbox host;
-   * anywhere else (i.e. the Pi Browser hitting the live GitHub Pages URL)
-   * runs against Mainnet.
+   * Forced on: every environment, including the deployed GitHub Pages URL,
+   * runs against the Pi Sandbox. No real Pi can move while this is true.
+   *
+   * Set to false to go live on Mainnet.
+   *
+   * To go back to picking the environment from the host instead:
+   *
+   *   get SANDBOX() {
+   *     const h = location.hostname;
+   *     return h === "localhost" || h === "127.0.0.1"
+   *       || h === "sandbox.minepi.com" || h.endsWith(".sandbox.minepi.com");
+   *   },
    */
-  get SANDBOX() {
-    const h = location.hostname;
-    return h === "localhost" || h === "127.0.0.1" || h.endsWith("sandbox.minepi.com");
-  },
+  SANDBOX: true,
 };

@@ -92,9 +92,17 @@ button is inert in a desktop browser (the metronome itself works anywhere).
 
 ## Environments
 
-`config.js` picks sandbox automatically on `localhost` and `sandbox.minepi.com`,
-and Mainnet everywhere else, so the deployed Pages URL runs against Mainnet.
-A "Sandbox" badge appears in the app bar when the sandbox flag is on.
+**`SANDBOX` is currently forced to `true`** in `config.js`, so every environment —
+including the deployed Pages URL — runs against the Pi Sandbox and no real Pi
+can move. A "Sandbox" badge shows in the app bar whenever the flag is on.
+
+To go live, set `SANDBOX: false`. `config.js` also carries a commented-out
+getter that picks the environment from the hostname instead, if you'd rather
+have localhost stay on Sandbox while production runs Mainnet.
+
+Note that the supported way to exercise the Sandbox is the Sandbox URL pointed
+at your local dev server; `sandbox: true` on the public Pages URL keeps real Pi
+safe but is not a configuration Pi documents.
 
 ## Local development
 
