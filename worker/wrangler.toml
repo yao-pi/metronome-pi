@@ -14,3 +14,8 @@ TIP_AMOUNT = "0.1"
 
 # PI_API_KEY is a secret, never put it here:
 #   npx wrangler secret put PI_API_KEY
+
+# Persist logs so a failed payment can be diagnosed after the fact, not only
+# while `wrangler tail` happens to be attached.
+[observability]
+enabled = true

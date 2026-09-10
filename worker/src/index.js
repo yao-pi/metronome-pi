@@ -60,8 +60,30 @@ async function piServerFetch(env, path, init = {}) {
       ...(init.headers || {}),
     },
   });
-  const body = await response.json().catch(() => ({}));
+  const text = await response.text();
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    // Pi returned HTML or a bare string; keep it so the cause is visible
+    // instead of collapsing to an empty object.
+    body = { raw: text.slice(0, 300) };
+  }
+  console.log(`pi ${init.method || "GET"} ${path} -> ${response.status}`, JSON.stringify(body).slice(0, 400));
   return { ok: response.ok, status: response.status, body };
+}
+
+/**
+ * Pi's own explanation of a failure, flattened to a string.
+ *
+ * Worth surfacing to the client: without it every failure reads as a bare
+ * HTTP code, and the actual cause (wrong project's API key, payment already
+ * cancelled, network mismatch) stays invisible. It carries no secret — the
+ * API key is never echoed back by Pi.
+ */
+function piError(body) {
+  if (!body || typeof body !== "object") return "";
+  return body.error_message || body.message || body.error || body.raw || "";
 }
 
 /**
@@ -72,13 +94,16 @@ async function piServerFetch(env, path, init = {}) {
  * from that response is the one we compare the payment against.
  */
 async function resolveUid(accessToken) {
-  if (!accessToken) return null;
+  if (!accessToken) return { error: "No access token was sent." };
   const response = await fetch(`${PI_API_BASE}/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!response.ok) return null;
-  const user = await response.json().catch(() => null);
-  return user?.uid || null;
+  const body = await response.json().catch(() => ({}));
+  console.log(`pi GET /me -> ${response.status}`, JSON.stringify(body).slice(0, 300));
+  if (!response.ok) {
+    return { error: `Pi rejected the access token (HTTP ${response.status}). ${piError(body)}`.trim() };
+  }
+  return body?.uid ? { uid: body.uid } : { error: "Pi returned no uid for this token." };
 }
 
 /**
@@ -87,11 +112,16 @@ async function resolveUid(accessToken) {
  */
 async function loadVerifiedPayment(env, paymentId, uid) {
   const { ok, status, body } = await piServerFetch(env, `/payments/${paymentId}`);
-  if (!ok) return { error: `Could not read payment (HTTP ${status})`, status: 502 };
+  if (!ok) {
+    const hint = status === 404
+      ? " The Server API Key may belong to a different Developer Portal project than the app that created this payment."
+      : "";
+    return { error: `Could not read payment (HTTP ${status}). ${piError(body)}${hint}`.trim(), status: 502 };
+  }
 
   const expected = Number(env.TIP_AMOUNT || "0.1");
   if (Number(body.amount) !== expected) {
-    return { error: "Unexpected payment amount.", status: 400 };
+    return { error: `Unexpected payment amount: got ${body.amount}, expected ${expected}.`, status: 400 };
   }
   if (body.user_uid !== uid) {
     return { error: "Payment does not belong to this user.", status: 403 };
@@ -110,8 +140,9 @@ async function handleApprove(request, env, payload) {
   const { paymentId, accessToken } = payload;
   if (!paymentId) return json({ error: "paymentId is required." }, 400, request, env);
 
-  const uid = await resolveUid(accessToken);
-  if (!uid) return json({ error: "Invalid access token." }, 401, request, env);
+  const who = await resolveUid(accessToken);
+  if (who.error) return json({ error: who.error }, 401, request, env);
+  const uid = who.uid;
 
   const verified = await loadVerifiedPayment(env, paymentId, uid);
   if (verified.error) return json({ error: verified.error }, verified.status, request, env);
@@ -126,8 +157,8 @@ async function handleApprove(request, env, payload) {
     method: "POST",
   });
   if (!ok) {
-    console.error("approve failed", status, body);
-    return json({ error: `Approval rejected by Pi (HTTP ${status})` }, 502, request, env);
+    console.error("approve failed", status, JSON.stringify(body));
+    return json({ error: `Approval rejected by Pi (HTTP ${status}). ${piError(body)}`.trim() }, 502, request, env);
   }
 
   return json({ ok: true, payment: body }, 200, request, env);
@@ -139,8 +170,9 @@ async function handleComplete(request, env, payload) {
     return json({ error: "paymentId and txid are required." }, 400, request, env);
   }
 
-  const uid = await resolveUid(accessToken);
-  if (!uid) return json({ error: "Invalid access token." }, 401, request, env);
+  const who = await resolveUid(accessToken);
+  if (who.error) return json({ error: who.error }, 401, request, env);
+  const uid = who.uid;
 
   const verified = await loadVerifiedPayment(env, paymentId, uid);
   if (verified.error) return json({ error: verified.error }, verified.status, request, env);
@@ -158,8 +190,8 @@ async function handleComplete(request, env, payload) {
   // running a tampered SDK and claiming a payment they never made, so the tip
   // must not be treated as received.
   if (!ok) {
-    console.error("complete failed", status, body);
-    return json({ error: `Completion rejected by Pi (HTTP ${status})` }, 502, request, env);
+    console.error("complete failed", status, JSON.stringify(body));
+    return json({ error: `Completion rejected by Pi (HTTP ${status}). ${piError(body)}`.trim() }, 502, request, env);
   }
 
   return json({ ok: true, payment: body }, 200, request, env);
