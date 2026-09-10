@@ -3,9 +3,22 @@
 A tap-tempo metronome with a fixed 0.1 π tip, built as a reference for the
 Pi App Platform integration workflow.
 
-- **Frontend** — static, Material Design 3, deployed to GitHub Pages from `docs/`.
+- **Frontend** — static, Material Design 3, in `docs/`.
 - **Backend** — a Cloudflare Worker in `worker/` that performs the Pi
   Server-Side Approval and Completion calls.
+
+This repo is the source of truth. The app is **published from a separate deploy
+mirror**, [yao-pi/yao-pi.github.io](https://github.com/yao-pi/yao-pi.github.io),
+so that it is served at a domain root:
+
+| | |
+|---|---|
+| Production URL | `https://yao-pi.github.io/` |
+| Deploy | `./scripts/deploy.sh` |
+
+Pi verifies domain ownership by fetching `validation-key.txt` from the **domain
+root**. An app on a project-Pages subpath (`/metronome-pi/`) would leave that
+file where Pi never looks, so the root mirror is not optional.
 
 ## Why there are two pieces
 
@@ -30,17 +43,20 @@ Pi Browser ──createPayment──▶ Pi SDK
 ## Layout
 
 ```
-docs/                  GitHub Pages root
+docs/                  the app; mirrored to the deploy repo verbatim
   index.html
   styles.css           MD3 tokens: colour, type scale, shape, elevation, motion
   app.js               tap tempo + Pi SDK integration
-  config.js            BACKEND_URL, tip amount, sandbox detection
-  validation-key.txt   ← replace with your key from the Developer Portal
+  config.js            BACKEND_URL, tip amount, sandbox flag
+scripts/deploy.sh      copies docs/ into the deploy mirror and pushes
 worker/
   src/index.js         /approve and /complete
   test/index.test.mjs  14 tests against a stubbed Pi API
   wrangler.toml
 ```
+
+There is no `validation-key.txt` here on purpose. It lives only in the deploy
+mirror, so a sync can never overwrite the real key with a placeholder.
 
 ## Setup
 
@@ -49,12 +65,22 @@ worker/
 In the Pi Browser, open `develop.pi`:
 
 - Create the app, then note the **Server API Key**.
-- Set the **Production URL** to `https://yao-pi.github.io/metronome-pi/`.
+- Set the **Production URL** to `https://yao-pi.github.io/` — the domain root,
+  served by the deploy mirror.
 - Set the **Development URL** to `http://localhost:8000` — this is where *your*
   machine serves the app (see [Local development](#local-development)); the Pi
   Sandbox loads it from there. It is not a URL Pi gives you.
-- Copy the **validation key** into `docs/validation-key.txt` and push, so Pi can
-  verify you control the domain.
+- Put the **validation key** in the deploy mirror's `validation-key.txt` and
+  push, so Pi can verify you control the domain:
+
+  ```bash
+  cd ~/Claude/yao-pi.github.io
+  echo "PASTE_KEY_HERE" > validation-key.txt
+  git add validation-key.txt && git commit -m "Update Pi domain validation key" && git push
+  ```
+
+  Confirm `https://yao-pi.github.io/validation-key.txt` returns exactly the key,
+  then click **Verify domain**.
 
 The **Sandbox URL** is the separate one Pi hands *back* to you, under "Run
 Development App in the Sandbox" in the app checklist. It looks like
@@ -82,8 +108,16 @@ curl https://metronome-pi.<your-subdomain>.workers.dev/health
 
 ### 3. Point the frontend at it
 
-Set `BACKEND_URL` in `docs/config.js` to the Worker URL, then commit and push.
-GitHub Pages redeploys automatically.
+Set `BACKEND_URL` in `docs/config.js` to the Worker URL, commit here, then
+publish it to the live site:
+
+```bash
+./scripts/deploy.sh "Point frontend at the Worker"
+```
+
+`ALLOWED_ORIGINS` in `worker/wrangler.toml` already covers
+`https://yao-pi.github.io` — an origin has no path, so the root and any subpath
+share one entry.
 
 ### 4. Test
 
