@@ -103,18 +103,25 @@ async function resolveUid(accessToken) {
   if (!response.ok) {
     return { error: `Pi rejected the access token (HTTP ${response.status}). ${piError(body)}`.trim() };
   }
-  return body?.uid ? { uid: body.uid } : { error: "Pi returned no uid for this token." };
+  // app_id identifies the Portal project that issued this token. Keep it: if
+  // the payment lookup later 404s, comparing the two is what explains why.
+  return body?.uid
+    ? { uid: body.uid, appId: body.app_id }
+    : { error: "Pi returned no uid for this token." };
 }
 
 /**
  * Fetch the payment and check it is really the 0.1 π tip, really belongs to
  * the caller, and has not been cancelled.
  */
-async function loadVerifiedPayment(env, paymentId, uid) {
+async function loadVerifiedPayment(env, paymentId, uid, appId) {
   const { ok, status, body } = await piServerFetch(env, `/payments/${paymentId}`);
   if (!ok) {
+    // 404 here almost always means a project mismatch rather than a missing
+    // payment: the payment exists, but under an app this API key cannot see.
     const hint = status === 404
-      ? " The Server API Key may belong to a different Developer Portal project than the app that created this payment."
+      ? ` The payment was created by app_id ${appId || "(unknown)"}, so PI_API_KEY must be that project's Server API Key.`
+        + " Testnet and Mainnet are separate Portal projects with separate keys."
       : "";
     return { error: `Could not read payment (HTTP ${status}). ${piError(body)}${hint}`.trim(), status: 502 };
   }
@@ -144,7 +151,7 @@ async function handleApprove(request, env, payload) {
   if (who.error) return json({ error: who.error }, 401, request, env);
   const uid = who.uid;
 
-  const verified = await loadVerifiedPayment(env, paymentId, uid);
+  const verified = await loadVerifiedPayment(env, paymentId, uid, who.appId);
   if (verified.error) return json({ error: verified.error }, verified.status, request, env);
 
   // Approving twice is not an error worth surfacing — the desired end state is
@@ -174,7 +181,7 @@ async function handleComplete(request, env, payload) {
   if (who.error) return json({ error: who.error }, 401, request, env);
   const uid = who.uid;
 
-  const verified = await loadVerifiedPayment(env, paymentId, uid);
+  const verified = await loadVerifiedPayment(env, paymentId, uid, who.appId);
   if (verified.error) return json({ error: verified.error }, verified.status, request, env);
 
   if (verified.payment.status?.developer_completed) {
