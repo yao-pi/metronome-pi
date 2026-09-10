@@ -201,8 +201,11 @@ if (PI_AVAILABLE) {
   }
 }
 
-if (CONFIG.SANDBOX && piReady) {
-  el.envBadge.textContent = "Sandbox";
+// Show which network is live. Mainnet is called out because a tip there moves
+// real Pi, and the two modes are otherwise indistinguishable on screen.
+if (piReady) {
+  el.envBadge.textContent = CONFIG.SANDBOX ? "Sandbox" : "Mainnet · real Pi";
+  el.envBadge.classList.toggle("badge--live", !CONFIG.SANDBOX);
   el.envBadge.hidden = false;
 }
 

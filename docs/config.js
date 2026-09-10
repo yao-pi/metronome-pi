@@ -15,18 +15,24 @@ window.APP_CONFIG = {
   TIP_AMOUNT: 0.1,
 
   /**
-   * Forced on: every environment, including the deployed GitHub Pages URL,
-   * runs against the Pi Sandbox. No real Pi can move while this is true.
+   * The sandbox flag must match how the app was reached, or the SDK has no one
+   * to talk to:
    *
-   * Set to false to go live on Mainnet.
+   *   Pi Sandbox  → frames http://localhost:8000 → needs sandbox: true
+   *   Pi Browser  → https://yao-pi.github.io/    → needs sandbox: false
    *
-   * To go back to picking the environment from the host instead:
+   * Forcing it true broke payments in the Pi Browser: sandbox mode expects a
+   * sandbox host frame to hand the payment to, and on the production URL there
+   * isn't one, so the flow never starts.
    *
-   *   get SANDBOX() {
-   *     const h = location.hostname;
-   *     return h === "localhost" || h === "127.0.0.1"
-   *       || h === "sandbox.minepi.com" || h.endsWith(".sandbox.minepi.com");
-   *   },
+   * Consequence: tips taken through the Pi Browser are real Mainnet Pi. To
+   * test without moving real Pi, use the Sandbox URL against your dev server.
    */
-  SANDBOX: true,
+  get SANDBOX() {
+    const h = location.hostname;
+    return h === "localhost"
+      || h === "127.0.0.1"
+      || h === "sandbox.minepi.com"
+      || h.endsWith(".sandbox.minepi.com");
+  },
 };
