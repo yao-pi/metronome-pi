@@ -1,0 +1,11 @@
+name = "metronome-pi"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+# Origins allowed to call this worker (comma-separated, no trailing slash).
+ALLOWED_ORIGINS = "https://yao-pi.github.io,http://localhost:8000"
+TIP_AMOUNT = "0.1"
+
+# PI_API_KEY is a secret, never put it here:
+#   npx wrangler secret put PI_API_KEY
